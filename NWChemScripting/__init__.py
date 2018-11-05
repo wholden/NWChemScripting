@@ -65,15 +65,13 @@ def start_job():
     return call(['msub', 'job.run'])
 
 
-
-def wait_for_calculation_completion(outfilename):
+def wait_for_calculation_completion(outfilename, maxwait=7200):
     w = 0
     while not os.path.isfile(outfilename):
         print('waiting for job to start: {}s'.format(w), end='\r')
         w = w + 1
         time.sleep(1)
 
-    maxwait = 7200
     print('output file created. blocking for maxwait {}s'.format(maxwait))
     i = 0
     while not check_calculation_successful(outfilename):
