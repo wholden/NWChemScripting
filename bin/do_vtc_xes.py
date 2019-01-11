@@ -15,7 +15,7 @@ COMPOUND = input('Compound name? ')
 
 def run_geometry_optimize():
     os.chdir(ROOTDIR + '/geometryoptimize')
-    copyfile('template-input.nw', 'input.nw')
+    shutil.copyfile('template-input.nw', 'input.nw')
     replace_text_in_file('input.nw', 'COMPOUND', COMPOUND)
     replace_text_in_file('input.nw', 'charge INPUTCHARGE', 'charge {}'.format(INITIALCHARGE))
     replace_text_in_file('input.nw', 'mult INPUTMULT', 'mult {}'.format(INITIALMULT))
@@ -28,10 +28,10 @@ def run_geometry_optimize():
 def run_gnd_state():
     os.chdir(ROOTDIR + '/gndstate')
 
-    copyfile('template-input-gnd.nw', 'input-gnd.nw')
+    shutil.copyfile('template-input-gnd.nw', 'input-gnd.nw')
 
     optimizedxyz = find_highest_number_xyz_file(ROOTDIR + '/geometryoptimize/xyzfiles/')
-    copyfile(ROOTDIR + '/geometryoptimize/xyzfiles/{}'.format(optimizedxyz), ROOTDIR + '/gndstate/{}'.format(optimizedxyz))
+    shutil.copyfile(ROOTDIR + '/geometryoptimize/xyzfiles/{}'.format(optimizedxyz), ROOTDIR + '/gndstate/{}'.format(optimizedxyz))
 
     centeredfile = center_xyz(optimizedxyz, 3)
 
@@ -50,7 +50,7 @@ def run_xes_calc():
 
     os.chdir(ROOTDIR + '/xescalc')
 
-    copyfile('template-input-vtc.nw', 'input-vtc.nw')
+    shutil.copyfile('template-input-vtc.nw', 'input-vtc.nw')
 
     replace_text_in_file('input-vtc.nw', 'COMPOUND', COMPOUND)
     replace_text_in_file('input-vtc.nw', 'charge INPUTCHARGE', 'charge {}'.format(INITIALCHARGE + 1))
@@ -58,9 +58,9 @@ def run_xes_calc():
 
     centeredfile = find_highest_number_xyz_file(ROOTDIR + '/geometryoptimize/xyzfiles/').split('.xyz')[0] + '_centered.xyz'
 
-    copyfile(ROOTDIR + '/gndstate/{}'.format(centeredfile), ROOTDIR + '/xescalc/{}'.format(centeredfile))
+    shutil.copyfile(ROOTDIR + '/gndstate/{}'.format(centeredfile), ROOTDIR + '/xescalc/{}'.format(centeredfile))
 
-    copyfile(ROOTDIR + '/gndstate/{}.movecs'.format(COMPOUND), ROOTDIR + '/xescalc/{}.movecs'.format(COMPOUND))
+    shutil.copyfile(ROOTDIR + '/gndstate/{}.movecs'.format(COMPOUND), ROOTDIR + '/xescalc/{}.movecs'.format(COMPOUND))
 
     replace_text_in_file('input-vtc.nw', 'load GEOMETRYFILE', 'load {}'.format(centeredfile))
 

@@ -134,3 +134,23 @@ def center_xyz(infile, targetline):
                 newfile.write('{}  {:>15.5f}{:>15.5f}{:>15.5f}\n'.format(*r))
             newfile.write('\n')
     return infile.split('.xyz')[0] + '_centered.xyz'
+
+
+def read_xyz(file):
+    with open(file, 'r') as f:
+        lines = f.readlines()
+        atoms = []
+        coords = []
+        for l in lines[2:]: #XYZ files must have two header rows
+            split = l.split()
+            atoms.append(split[0])
+            coords.append([float(x) for x in split[1:]])
+        assert len(atoms) == len(coords), 'Something went wrong, len of atoms doesnt equal length of coords'
+    return atoms, coords
+
+
+def basic_multiplicity_from_atoms(atoms):
+    electrons = 0
+    for a in atoms:
+        electrons += periodictable.__getattribute__(a).number
+    return electrons % 2
