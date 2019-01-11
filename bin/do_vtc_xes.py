@@ -9,7 +9,7 @@ from NWChemScripting import *
 
 
 INITIALCHARGE = int(input('Initial charge? '))
-INITIALMULT = int(input('Initial multiplicity? '))
+#INITIALMULT = int(input('Initial multiplicity? '))
 COMPOUND = input('Compound name? ')
 
 
@@ -96,6 +96,10 @@ if __name__ == '__main__':
     # Set current working directory  and ROOTDIR needed for the 'run' functions to work
     os.chdir('{}'.format(COMPOUND))
     ROOTDIR = os.getcwd()
+
+    #Get initial multiplicity from XYZ file
+    INITIALMULT = basic_multiplicity_from_atoms(read_xyz(ROOTDIR + '/geometryoptimize/{}.xyz'.format(COMPOUND)[0]))
+    print('Initial multiplicity chosen to be {} based on number of electrons and atomic species in input XYZ file'.format(INITIALMULT))
 
     print('Beginning calculation sequence...')
     run_geometry_optimize()
