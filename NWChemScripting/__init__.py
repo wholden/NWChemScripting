@@ -152,3 +152,25 @@ def basic_multiplicity_from_atoms(atoms):
     for a in atoms:
         electrons += periodictable.__getattribute__(a).number
     return electrons % 2
+
+
+def make_xyz_animation(basename, directory=None):
+    if directory is None:
+        directory = os.getcwd()
+    
+    filere = re.compile(r'{}\d\d\d.xyz'.format(basename))
+    
+    xyzfiles = []
+    for f in os.listdir(directory):
+        if filere.match(f) is not None:
+            xyzfiles.append(f)
+    
+    if not xyzfiles:
+        raise FileNotFoundError('No files matching {}###.xyz were found.'.format(basename))
+        
+    assert not os.path.exists(directory+'{}animation.xyz'.format(basename)), 'File already exists'
+        
+    with open(directory+'{}animation.xyz'.format(basename), 'w') as outfile:
+        for xyz in xyzfiles:
+            with open(directory+xyz, 'r') as infile:
+                outfile.write(infile.read())
