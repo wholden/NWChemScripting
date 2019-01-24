@@ -156,7 +156,7 @@ def basic_multiplicity_from_atoms(atoms):
 
 def make_xyz_animation(basename, directory=None):
     if directory is None:
-        directory = os.getcwd()
+        directory = os.getcwd() + '/'
     
     filere = re.compile(r'{}\d\d\d.xyz'.format(basename))
     
