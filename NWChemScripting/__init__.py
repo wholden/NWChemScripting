@@ -171,6 +171,6 @@ def make_xyz_animation(basename, directory=None):
     assert not os.path.exists(directory+'{}animation.xyz'.format(basename)), 'File already exists'
         
     with open(directory+'{}animation.xyz'.format(basename), 'w') as outfile:
-        for xyz in xyzfiles:
+        for xyz in sorted(xyzfiles):
             with open(directory+xyz, 'r') as infile:
                 outfile.write(infile.read())
