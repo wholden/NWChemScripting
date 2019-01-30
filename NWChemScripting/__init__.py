@@ -2,6 +2,7 @@ import re
 import os
 import time
 from subprocess import call
+import periodictable
 
 
 def replace_text_in_file(infile, oldstr, newstr):
@@ -151,7 +152,8 @@ def basic_multiplicity_from_atoms(atoms):
     electrons = 0
     for a in atoms:
         electrons += periodictable.__getattribute__(a).number
-    return electrons % 2
+    print('{} electrons, which means basic multiplicity {}'.format(electrons, electrons % 2 + 1))
+    return electrons % 2 + 1
 
 
 def make_xyz_animation(basename, directory=None):
