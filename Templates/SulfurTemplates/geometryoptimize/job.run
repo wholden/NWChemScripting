@@ -1,0 +1,31 @@
+#!/bin/csh -f
+#MSUB -l nodes=5:ppn=16,walltime=02:00:00
+#MSUB -A emsls50088
+#MSUB -o myjob.out
+#MSUB -e myjob.err
+#MSUB -N WillsCalculation
+#MSUB -m ea
+#MSUB -M holdenwm@uw.edu
+#MSUB -V
+source /etc/profile.d/modules.csh
+module purge
+module load intel/ips_17_u4
+module load impi/5.1.2.150
+setenv ARMCI_DEFAULT_SHMMAX 32768
+setenv NWCHEM_BASIS_LIBRARY "/home/scicons/cascade/apps/nwchem-6.8/src/basis/libraries/"
+setenv NWCHEM_NWPW_LIBRARY "/home/scicons/cascade/apps/nwchem-6.8/src/nwpw/libraryps/"
+setenv ARMCI_OPENIB_DEVICE mlx4_0
+setenv OMP_NUM_THREADS 1
+setenv MKL_NUM_THREADS 1
+setenv NWC_RANKS_PER_DEVICE 0
+setenv OFFLOAD_INIT on_offload
+setenv MPIRETURN 999
+mpirun -n 80 /dtemp/emsls50088/nwchem-exec/nwchem-6.8.1-10182018 ./input.nw  > output.out
+
+setenv MPIRETURN $?
+
+############################################################################
+# End of the job script
+############################################################################
+
+exit $MPIRETURN

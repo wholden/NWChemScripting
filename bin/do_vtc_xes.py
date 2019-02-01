@@ -98,7 +98,7 @@ if __name__ == '__main__':
     ROOTDIR = os.getcwd()
 
     #Get initial multiplicity from XYZ file
-    INITIALMULT = basic_multiplicity_from_atoms(read_xyz(ROOTDIR + '/geometryoptimize/{}.xyz'.format(COMPOUND)[0]))
+    INITIALMULT = basic_multiplicity_from_atoms(read_xyz(ROOTDIR + '/geometryoptimize/{}.xyz'.format(COMPOUND))[0])
     print('Initial multiplicity chosen to be {} based on number of electrons and atomic species in input XYZ file'.format(INITIALMULT))
 
     print('Beginning calculation sequence...')
