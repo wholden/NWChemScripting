@@ -49,7 +49,7 @@ def check_calculation_successful(outfile):
         return False
 
 
-def get_highest_occupied_beta_movec(infile):
+def get_highest_occupied_beta_movec(infile): #Deprecated, kept for backwards compatibility
     with open(infile, 'r') as f:
         content = f.read()
         betaorbitalsindex = content.index('DFT Final Beta Molecular Orbital Analysis')
@@ -58,6 +58,25 @@ def get_highest_occupied_beta_movec(infile):
         f.seek(betaorbitalsindex + occ0index)
         vectorindex = betaorbitals.index('Vector', occ0index - 14, occ0index)
         f.seek(betaorbitalsindex + vectorindex)
+        r = f.readline()
+    return int(r.split()[1]) - 1
+
+
+def get_highest_occupied_movec(infile, channel='beta'):
+    if channel == 'beta':
+        channel = 'Beta'
+    elif channel == 'alpha':
+        channel = 'Alpha'
+    else:
+        rais RuntimeError('Channel must be \'alpha\' or \'beta\'')
+    with open(infile, 'r') as f:
+        content = f.read()
+        orbitalsindex = content.index('DFT Final {} Molecular Orbital Analysis'.format(Channel))
+        orbitals = content[orbitalsindex:]
+        occ0index = orbitals.index('Occ=0')
+        f.seek(orbitalsindex + occ0index)
+        vectorindex = orbitals.index('Vector', occ0index - 14, occ0index)
+        f.seek(orbitalsindex + vectorindex)
         r = f.readline()
     return int(r.split()[1]) - 1
 
