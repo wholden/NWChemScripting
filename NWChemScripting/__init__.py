@@ -2,7 +2,6 @@ import re
 import os
 import time
 from subprocess import call
-import periodictable
 
 
 def replace_text_in_file(infile, oldstr, newstr):
@@ -68,10 +67,10 @@ def get_highest_occupied_movec(infile, channel='beta'):
     elif channel == 'alpha':
         channel = 'Alpha'
     else:
-        rais RuntimeError('Channel must be \'alpha\' or \'beta\'')
+        raise RuntimeError('Channel must be \'alpha\' or \'beta\'')
     with open(infile, 'r') as f:
         content = f.read()
-        orbitalsindex = content.index('DFT Final {} Molecular Orbital Analysis'.format(Channel))
+        orbitalsindex = content.index('DFT Final {} Molecular Orbital Analysis'.format(channel))
         orbitals = content[orbitalsindex:]
         occ0index = orbitals.index('Occ=0')
         f.seek(orbitalsindex + occ0index)
@@ -79,6 +78,16 @@ def get_highest_occupied_movec(infile, channel='beta'):
         f.seek(orbitalsindex + vectorindex)
         r = f.readline()
     return int(r.split()[1]) - 1
+
+
+def get_number_alphas_betas(infile):
+    res = {}
+    with open(infile, 'r') as f:
+        content = f.read()
+        generalinfo = content[content.index('General Information') : content.index('XC Information')]
+        res['alphas'] = int([s for s in generalinfo.splitlines() if 'Alpha' in s][0].split(':')[1])
+        res['betas'] = int([s for s in generalinfo.splitlines() if 'Beta' in s][0].split(':')[1])
+    return res
 
 
 def start_job():
@@ -168,6 +177,7 @@ def read_xyz(file):
 
 
 def basic_multiplicity_from_atoms(atoms):
+    import periodictable
     electrons = 0
     for a in atoms:
         electrons += periodictable.__getattribute__(a).number
