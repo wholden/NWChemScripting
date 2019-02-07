@@ -2,6 +2,8 @@ import re
 import os
 import time
 from subprocess import call
+import numpy as np
+import matplotlib.pyplot as plt
 
 
 def replace_text_in_file(infile, oldstr, newstr):
