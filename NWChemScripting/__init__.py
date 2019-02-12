@@ -289,3 +289,64 @@ def plot_spectrum_and_transitions(transitions, lorentz_ev=1, erange=None,
         plt.show()
 
     return fig
+
+
+def parse_roots_from_tddft_output(file):
+    with open(file, 'r') as f:
+        lines = f.readlines()
+        
+    rootre = re.compile('Root\s+\d+')
+    transitionre = re.compile(r'\s+Occ\.\s+(\d+)\s+(alpha|beta)\s+\w\s+-+\s+Virt.\s+(\d+)\s+(alpha|beta)\s+\w\s+(-?\d+\.\d+)\s+')
+    
+    rootlinenums = []
+    for i, l in enumerate(lines):
+        if rootre.search(l):
+            rootlinenums.append(i)
+            
+    rootdict = {}
+    for i in range(len(rootlinenums)):
+        rootdict[i + 1] = {}
+        
+    for k, d in rootdict.items():
+        d['transitions'] = []
+        if k != len(rootdict):
+            lower = rootlinenums[k-1]
+            upper = rootlinenums[k]
+        else:
+            lower = rootlinenums[k-1]
+            upper = None
+        for l in lines[lower:upper]:
+            m = transitionre.match(l)
+            if m:
+                trans = {}
+                trans['occ ({})'.format(m.group(2))] = m.group(1)
+                trans['virt ({})'.format(m.group(4))] = m.group(3)
+                trans['coeff'] = float(m.group(5))
+                d['transitions'].append(trans)
+
+            dm = re.match(r'\s+Dipole Oscillator Strength\s+(-?\d+\.\d+)\s+', l)
+            if dm:
+                d['Dipole Oscillator Strength'] = float(dm.group(1))
+
+            qm = re.match(r'\s+Electric Quadrupole\s+(-?\d+\.\d+)\s+', l)
+            if qm:
+                d['Electric Quadrupole'] = float(qm.group(1))
+
+            mm = re.match(r'\s+Magnetic Dipole\s+(-?\d+\.\d+)\s+', l)
+            if mm:
+                d['Magnetic Dipole'] = float(mm.group(1))
+
+            tm = re.match(r'\s+Total Oscillator Strength\s+(-?\d+\.\d+)\s+', l)
+            if tm:
+                d['Total Oscillator Strength'] = float(tm.group(1))
+
+            auev = re.match(r'\s+Root\s+\d+\s+\w\s+(-?\d+\.\d+)\s+a.u.\s+(-?\d+\.\d+)\s+eV\s+', l)
+            if auev:
+                d['a.u.'] = auev.group(1)
+                d['eV'] = auev.group(2)
+
+            s2 = re.match(r'\s+<S2>\s+=\s+(-?\d+\.\d+)\s+', l)
+            if s2:
+                d['<S2>'] = s2.group(1)
+                
+    return rootdict
