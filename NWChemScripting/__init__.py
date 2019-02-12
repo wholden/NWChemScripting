@@ -3,7 +3,7 @@ import os
 import time
 from subprocess import call
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 
 def replace_text_in_file(infile, oldstr, newstr):
@@ -263,6 +263,7 @@ def gaussian_broaden(spectrum, width_ev=2, numpoints=1000, xmin=None, xmax=None)
 
 def plot_spectrum_and_transitions(transitions, lorentz_ev=1, erange=None, 
                                 numpoints=1000, gaussian_ev=None, show=True):
+    import matplotlib.pyplot as plt
     spectrum = spectrum_from_transitions(transitions, lorentz_ev=lorentz_ev, 
                             erange=erange, numpoints=numpoints, peaknorm=False)
     x, y = spectrum
