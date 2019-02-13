@@ -2,6 +2,30 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
+import plotly.offline as py
+import plotly.tools as tls
+py.init_notebook_mode()
+
+def plotly_show():
+    #get fig and convert to plotly
+    fig = plt.gcf()
+    plotlyfig = tls.mpl_to_plotly(fig, resize=True)
+    
+    #fix dumb automatic formatting choices
+    plotlyfig['layout']['xaxis1']['tickfont']['size']=14
+    plotlyfig['layout']['xaxis1']['titlefont']['size']=16
+    plotlyfig['layout']['yaxis1']['tickfont']['size']=14
+    plotlyfig['layout']['yaxis1']['titlefont']['size']=16
+    plotlyfig['layout']['showlegend'] = True
+    
+    #add a fix to bring back automatic sizing
+    plotlyfig['layout']['height'] = None
+    plotlyfig['layout']['width'] = None
+    plotlyfig['layout']['autosize'] = True
+    
+    # plot
+    py.iplot(plotlyfig)
+
 
 def read_tddft_transitions_file(path):
     return np.loadtxt(path).T
