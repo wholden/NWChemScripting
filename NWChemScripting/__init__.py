@@ -350,3 +350,14 @@ def parse_roots_from_tddft_output(file):
                 d['<S2>'] = s2.group(1)
                 
     return rootdict
+
+
+def write_xyz_from_atoms_coords(filename, atoms, coords, comment=None):
+    if '.xyz' not in filename:
+        filename += '.xyz'
+    with open(filename, 'w') as outfile:
+        outfile.write(str(len(atoms)) + '\n')
+        outfile.write('{}\n'.format(comment))
+        for a, c in zip(atoms, coords):
+            outfile.write('{}{:>15.5f}{:>15.5f}{:>15.5f}\n'.format(a, *c))
+
