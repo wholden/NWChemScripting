@@ -2,7 +2,8 @@ import re
 import os
 import time
 from subprocess import call
-import periodictable
+import numpy as np
+#import matplotlib.pyplot as plt
 
 
 def replace_text_in_file(infile, oldstr, newstr):
@@ -49,7 +50,7 @@ def check_calculation_successful(outfile):
         return False
 
 
-def get_highest_occupied_beta_movec(infile):
+def get_highest_occupied_beta_movec(infile): #Deprecated, kept for backwards compatibility
     with open(infile, 'r') as f:
         content = f.read()
         betaorbitalsindex = content.index('DFT Final Beta Molecular Orbital Analysis')
@@ -62,11 +63,40 @@ def get_highest_occupied_beta_movec(infile):
     return int(r.split()[1]) - 1
 
 
+def get_highest_occupied_movec(infile, channel='beta'):
+    if channel == 'beta':
+        channel = 'Beta'
+    elif channel == 'alpha':
+        channel = 'Alpha'
+    else:
+        raise RuntimeError('Channel must be \'alpha\' or \'beta\'')
+    with open(infile, 'r') as f:
+        content = f.read()
+        orbitalsindex = content.index('DFT Final {} Molecular Orbital Analysis'.format(channel))
+        orbitals = content[orbitalsindex:]
+        occ0index = orbitals.index('Occ=0')
+        f.seek(orbitalsindex + occ0index)
+        vectorindex = orbitals.index('Vector', occ0index - 14, occ0index)
+        f.seek(orbitalsindex + vectorindex)
+        r = f.readline()
+    return int(r.split()[1]) - 1
+
+
+def get_number_alphas_betas(infile):
+    res = {}
+    with open(infile, 'r') as f:
+        content = f.read()
+        generalinfo = content[content.index('General Information') : content.index('XC Information')]
+        res['alphas'] = int([s for s in generalinfo.splitlines() if 'Alpha' in s][0].split(':')[1])
+        res['betas'] = int([s for s in generalinfo.splitlines() if 'Beta' in s][0].split(':')[1])
+    return res
+
+
 def start_job():
     return call(['msub', 'job.run'])
 
 
-def wait_for_calculation_completion(outfilename, maxwait=7200):
+def wait_for_calculation_completion(outfilename, maxwait=3600*24):
     w = 0
     while not os.path.isfile(outfilename):
         print('waiting for job to start: {}s'.format(w), end='\r')
@@ -149,6 +179,7 @@ def read_xyz(file):
 
 
 def basic_multiplicity_from_atoms(atoms):
+    import periodictable
     electrons = 0
     for a in atoms:
         electrons += periodictable.__getattribute__(a).number
@@ -176,3 +207,157 @@ def make_xyz_animation(basename, directory=None):
         for xyz in sorted(xyzfiles):
             with open(directory+xyz, 'r') as infile:
                 outfile.write(infile.read())
+
+
+
+def read_dft_transitions_file(path):
+    return np.loadtxt(path).T
+
+
+#https://scipython.com/book/chapter-8-scipy/examples/the-voigt-profile/
+def Lorentzian(x, xc, gamma):
+    """ Return Lorentzian line shape at x with HWHM gamma """
+    return gamma / np.pi / ((x-xc)**2 + gamma**2)
+
+
+def spectrum_from_transitions(transitions, lorentz_ev=1, erange=None, numpoints=1000, peaknorm=True):
+    x, y = transitions
+    if erange is not None:
+        good = np.logical_and(x >= erange[0], x <= erange[1])
+        x, y = x[good], y[good]
+        x_eval = np.linspace(erange[0], erange[1], numpoints)
+    else:
+        xmin = np.min(x)
+        xmax = np.max(x)
+        padding = (xmax - xmin) / 2
+        x_eval = np.linspace(xmin - padding, xmax + padding, numpoints)
+    
+    spectrum = np.zeros_like(x_eval)
+    for e, a in zip(x, y):
+        spectrum += a * Lorentzian(x_eval, e, lorentz_ev/2)
+    
+    if peaknorm:
+        spectrum = spectrum / np.max(spectrum)
+
+    return np.array([x_eval, spectrum])
+
+
+#Thank you stackoverflow
+#https://stackoverflow.com/questions/24143320/gaussian-sum-filter-for-irregular-spaced-points
+def gaussian_broaden(spectrum, width_ev=2, numpoints=1000, xmin=None, xmax=None):
+    x, y = spectrum
+    if xmin is None:
+        xmin = np.min(x)
+    if xmax is None:
+        xmax = np.max(x)
+    x_eval = np.linspace(xmin, xmax, numpoints)
+    sigma = width_ev/(2*np.sqrt(2*np.log(2)))
+
+    delta_x = x_eval[:, None] - x
+    weights = np.exp(-delta_x*delta_x / (2*sigma*sigma)) / (np.sqrt(2*np.pi) * sigma)
+    weights /= np.sum(weights, axis=1, keepdims=True)
+    y_eval = np.dot(weights, y)
+
+    return np.array([x_eval, y_eval])
+
+
+def plot_spectrum_and_transitions(transitions, lorentz_ev=1, erange=None, 
+                                numpoints=1000, gaussian_ev=None, show=True):
+    import matplotlib.pyplot as plt
+    spectrum = spectrum_from_transitions(transitions, lorentz_ev=lorentz_ev, 
+                            erange=erange, numpoints=numpoints, peaknorm=False)
+    x, y = spectrum
+    norm = np.max(y)
+
+    fig, ax = plt.subplots()
+    ax.plot(x, y / norm)
+
+    #rescale so that stem matches spectral height
+    rescale = Lorentzian(0, 0, lorentz_ev/2)
+    xs, ys = transitions
+    if erange is not None:
+        good = np.logical_and(xs >= erange[0], xs <= erange[1])
+        xs, ys = xs[good], ys[good]
+    markerline, stemlines, baseline = ax.stem(xs, ys * rescale / norm, 
+                                                basefmt='k', linefmt='C0-')
+    plt.setp(baseline, visible=False)
+    plt.setp(stemlines, 'linewidth', 1)
+    plt.setp(markerline, 'markersize', 3)
+    plt.xlabel('Energy (eV)')
+
+    if show:
+        plt.show()
+
+    return fig
+
+
+def parse_roots_from_tddft_output(file):
+    with open(file, 'r') as f:
+        lines = f.readlines()
+        
+    rootre = re.compile('Root\s+\d+')
+    transitionre = re.compile(r'\s+Occ\.\s+(\d+)\s+(alpha|beta)\s+\w\s+-+\s+Virt.\s+(\d+)\s+(alpha|beta)\s+\w\s+(-?\d+\.\d+)\s+')
+    
+    rootlinenums = []
+    for i, l in enumerate(lines):
+        if rootre.search(l):
+            rootlinenums.append(i)
+            
+    rootdict = {}
+    for i in range(len(rootlinenums)):
+        rootdict[i + 1] = {}
+        
+    for k, d in rootdict.items():
+        d['transitions'] = []
+        if k != len(rootdict):
+            lower = rootlinenums[k-1]
+            upper = rootlinenums[k]
+        else:
+            lower = rootlinenums[k-1]
+            upper = None
+        for l in lines[lower:upper]:
+            m = transitionre.match(l)
+            if m:
+                trans = {}
+                trans['occ ({})'.format(m.group(2))] = m.group(1)
+                trans['virt ({})'.format(m.group(4))] = m.group(3)
+                trans['coeff'] = float(m.group(5))
+                d['transitions'].append(trans)
+
+            dm = re.match(r'\s+Dipole Oscillator Strength\s+(-?\d+\.\d+)\s+', l)
+            if dm:
+                d['Dipole Oscillator Strength'] = float(dm.group(1))
+
+            qm = re.match(r'\s+Electric Quadrupole\s+(-?\d+\.\d+)\s+', l)
+            if qm:
+                d['Electric Quadrupole'] = float(qm.group(1))
+
+            mm = re.match(r'\s+Magnetic Dipole\s+(-?\d+\.\d+)\s+', l)
+            if mm:
+                d['Magnetic Dipole'] = float(mm.group(1))
+
+            tm = re.match(r'\s+Total Oscillator Strength\s+(-?\d+\.\d+)\s+', l)
+            if tm:
+                d['Total Oscillator Strength'] = float(tm.group(1))
+
+            auev = re.match(r'\s+Root\s+\d+\s+\w\s+(-?\d+\.\d+)\s+a.u.\s+(-?\d+\.\d+)\s+eV\s+', l)
+            if auev:
+                d['a.u.'] = auev.group(1)
+                d['eV'] = auev.group(2)
+
+            s2 = re.match(r'\s+<S2>\s+=\s+(-?\d+\.\d+)\s+', l)
+            if s2:
+                d['<S2>'] = s2.group(1)
+                
+    return rootdict
+
+
+def write_xyz_from_atoms_coords(filename, atoms, coords, comment=None):
+    if '.xyz' not in filename:
+        filename += '.xyz'
+    with open(filename, 'w') as outfile:
+        outfile.write(str(len(atoms)) + '\n')
+        outfile.write('{}\n'.format(comment))
+        for a, c in zip(atoms, coords):
+            outfile.write('{}{:>15.5f}{:>15.5f}{:>15.5f}\n'.format(a, *c))
+
