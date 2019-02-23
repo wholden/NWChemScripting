@@ -65,6 +65,10 @@ def get_highest_occupied_beta_movec(infile):
 def start_job():
     return call(['msub', 'job.run'])
 
+def start_job_mpi():
+    with open('output.out', 'w') as f:
+        call(['mpirun', '-n', '12', '/home/xrays/NWChem/nwchem/bin/LINUX64/nwchem', 'input.nw'], stdout=f)
+
 
 def wait_for_calculation_completion(outfilename, maxwait=7200):
     w = 0

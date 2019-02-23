@@ -20,41 +20,45 @@ def run_geometry_optimize():
     replace_text_in_file('input.nw', 'charge INPUTCHARGE', 'charge {}'.format(INITIALCHARGE))
     replace_text_in_file('input.nw', 'mult INPUTMULT', 'mult {}'.format(INITIALMULT))
 
-    assert start_job() == 0, 'Run did NOT start succesfully.'
+#    assert start_job() == 0, 'Run did NOT start succesfully.'
+    start_job_mpi()
 
-    wait_for_calculation_completion('output.out')
+#    wait_for_calculation_completion('output.out')
+    wait_for_calculation_completion('output.out', 12*3600)
 
 
 def run_gnd_state():
     os.chdir(ROOTDIR + '/gndstate')
 
-    shutil.copyfile('template-input-gnd.nw', 'input-gnd.nw')
+    shutil.copyfile('template-input-gnd.nw', 'input.nw')
 
     optimizedxyz = find_highest_number_xyz_file(ROOTDIR + '/geometryoptimize/xyzfiles/')
     shutil.copyfile(ROOTDIR + '/geometryoptimize/xyzfiles/{}'.format(optimizedxyz), ROOTDIR + '/gndstate/{}'.format(optimizedxyz))
 
     centeredfile = center_xyz(optimizedxyz, 3)
 
-    replace_text_in_file('input-gnd.nw', 'COMPOUND', COMPOUND)
-    replace_text_in_file('input-gnd.nw', 'charge INPUTCHARGE', 'charge {}'.format(INITIALCHARGE))
-    replace_text_in_file('input-gnd.nw', 'mult INPUTMULT', 'mult {}'.format(INITIALMULT))
+    replace_text_in_file('input.nw', 'COMPOUND', COMPOUND)
+    replace_text_in_file('input.nw', 'charge INPUTCHARGE', 'charge {}'.format(INITIALCHARGE))
+    replace_text_in_file('input.nw', 'mult INPUTMULT', 'mult {}'.format(INITIALMULT))
 
-    replace_text_in_file('input-gnd.nw', 'load GEOMETRYFILE', 'load {}'.format(centeredfile))
+    replace_text_in_file('input.nw', 'load GEOMETRYFILE', 'load {}'.format(centeredfile))
 
-    assert start_job() == 0, 'Run did NOT start succesfully.'
+#    assert start_job() == 0, 'Run did NOT start succesfully.'
+    start_job_mpi()
 
-    wait_for_calculation_completion('output-gnd.out')
+#    wait_for_calculation_completion('output-gnd.out')
+    wait_for_calculation_completion('output.out', 12*3600)
 
 
 def run_xes_calc():
 
     os.chdir(ROOTDIR + '/xescalc')
 
-    shutil.copyfile('template-input-vtc.nw', 'input-vtc.nw')
+    shutil.copyfile('template-input-vtc.nw', 'input.nw')
 
-    replace_text_in_file('input-vtc.nw', 'COMPOUND', COMPOUND)
-    replace_text_in_file('input-vtc.nw', 'charge INPUTCHARGE', 'charge {}'.format(INITIALCHARGE + 1))
-    replace_text_in_file('input-vtc.nw', 'mult INPUTMULT', 'mult {}'.format(INITIALMULT + 1))
+    replace_text_in_file('input.nw', 'COMPOUND', COMPOUND)
+    replace_text_in_file('input.nw', 'charge INPUTCHARGE', 'charge {}'.format(INITIALCHARGE + 1))
+    replace_text_in_file('input.nw', 'mult INPUTMULT', 'mult {}'.format(INITIALMULT + 1))
 
     centeredfile = find_highest_number_xyz_file(ROOTDIR + '/geometryoptimize/xyzfiles/').split('.xyz')[0] + '_centered.xyz'
 
@@ -62,13 +66,15 @@ def run_xes_calc():
 
     shutil.copyfile(ROOTDIR + '/gndstate/{}.movecs'.format(COMPOUND), ROOTDIR + '/xescalc/{}.movecs'.format(COMPOUND))
 
-    replace_text_in_file('input-vtc.nw', 'load GEOMETRYFILE', 'load {}'.format(centeredfile))
+    replace_text_in_file('input.nw', 'load GEOMETRYFILE', 'load {}'.format(centeredfile))
 
-    replace_text_in_file('input-vtc.nw', 'HIGHESTOCCUPIEDBETA', str(get_highest_occupied_beta_movec(ROOTDIR + '/gndstate/output-gnd.out')))
+    replace_text_in_file('input.nw', 'HIGHESTOCCUPIEDBETA', str(get_highest_occupied_beta_movec(ROOTDIR + '/gndstate/output.out')))
 
-    assert start_job() == 0, 'Run did NOT start succesfully.'
+#    assert start_job() == 0, 'Run did NOT start succesfully.'
+    start_job_mpi()
 
-    wait_for_calculation_completion('output-vtc.out')
+#    wait_for_calculation_completion('output-vtc.out')
+    wait_for_calculation_completion('output.out', 12*3600)
 
 
 if __name__ == '__main__':
@@ -108,6 +114,6 @@ if __name__ == '__main__':
 
     # Process final output file to .dat file
     os.chdir(ROOTDIR)
-    with open('xescalc/output-vtc.out', 'r') as xesoutput:
+    with open('xescalc/output.out', 'r') as xesoutput:
         with open('xescalc/{}.dat'.format(COMPOUND), 'w') as xesdat:
             proc = subprocess.Popen(['nw_spectrum_vtc_wespecmod.py', '-x'], stdin=xesoutput, stdout=xesdat)
