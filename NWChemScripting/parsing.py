@@ -1,5 +1,6 @@
 import re
 import numpy as np
+import os
 
 def parse_roots_from_tddft_output(file):
     with open(file, 'r') as f:
@@ -107,6 +108,10 @@ def parse_alpha_beta_vector_linenums(lines):
 
 
 def parse_movec_info_all(lines):
+    '''Returns avecs, bvecs'''
+    if os.path.exists(lines):
+        with open(lines, 'r') as file:
+            lines = file.readlines()
     vectorre = re.compile(r'\s+Vector\s+(\d+)\s+Occ=(\d+\.\d+)D(.\d+)\s+E=([\- ]?\d+.\d+)D(.\d+)')
     mocenterre = re.compile(r'\s+MO Center=\s+(.\d+\.\d+)D(.\d+),\s+(.\d+\.\d+)D(.\d+),\s+(.\d+\.\d+)D(.\d+),\s+r\^2=\s+(\d+\.\d+)D(.\d+)')
     bfnre = re.compile(r'\s+(\d+)\s+(\-?\d+\.\d+)\s+(\d+)\s+(\w+)\s+(\w+)')
