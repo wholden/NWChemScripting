@@ -2,6 +2,7 @@ import re
 import numpy as np
 import os
 
+
 def parse_roots_from_tddft_output(file):
     with open(file, 'r') as f:
         lines = f.readlines()
@@ -59,6 +60,18 @@ def parse_roots_from_tddft_output(file):
             s2 = re.match(r'\s+<S2>\s+=\s+(-?\d+\.\d+)\s+', l)
             if s2:
                 d['<S2>'] = s2.group(1)
+                
+            tm0m = re.match(r'\s+Transition Moments\s+X\s+(-?\d+\.\d+)\s+Y\s+(-?\d+\.\d+)\s+Z\s+(-?\d+\.\d+)', l)
+            if tm0m:
+                d['Transition Moments (XYZ)'] = np.array(tm0m.groups()).astype(float)
+                
+            tm1m = re.match(r'\s+Transition Moments\s+XX\s+(-?\d+\.\d+)\s+XY\s+(-?\d+\.\d+)\s+XZ\s+(-?\d+\.\d+)', l)
+            if tm1m:
+                d['Transition Moments (XX, XY, XZ)'] = np.array(tm1m.groups()).astype(float)
+                
+            tm2m = re.match(r'\s+Transition Moments\s+YY\s+(-?\d+\.\d+)\s+YZ\s+(-?\d+\.\d+)\s+ZZ\s+(-?\d+\.\d+)', l)
+            if tm2m:
+                d['Transition Moments (YY, YZ, ZZ[typo?])'] = np.array(tm2m.groups()).astype(float)
                 
     return rootdict
 
