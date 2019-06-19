@@ -54,12 +54,12 @@ def parse_roots_from_tddft_output(file):
 
             auev = re.match(r'\s+Root\s+\d+\s+\w\s+(-?\d+\.\d+)\s+a.u.\s+(-?\d+\.\d+)\s+eV\s+', l)
             if auev:
-                d['a.u.'] = auev.group(1)
-                d['eV'] = auev.group(2)
+                d['a.u.'] = floeat(auev.group(1))
+                d['eV'] = float(auev.group(2))
 
             s2 = re.match(r'\s+<S2>\s+=\s+(-?\d+\.\d+)\s+', l)
             if s2:
-                d['<S2>'] = s2.group(1)
+                d['<S2>'] = floeat(s2.group(1))
                 
             tm0m = re.match(r'\s+Transition Moments\s+X\s+(-?\d+\.\d+)\s+Y\s+(-?\d+\.\d+)\s+Z\s+(-?\d+\.\d+)', l)
             if tm0m:
@@ -173,7 +173,7 @@ def parse_movec_info_all(lines):
 
                     
     for a, b in zip(alphalinenums, betalinenums):
-        for l in lines[b:]:
+        for l in lines[b:]: #TODO fix this, if alpha and beta vectors get printed twice, this will accidentally parse all
             m = vectorre.match(l)
             if m:
                 # save previously parsed vector and instantiate new one
@@ -199,9 +199,9 @@ def parse_movec_info_all(lines):
             if m:
                 for bfn in m:
                     bfndict = {}
-                    bfndict['Bfn. #'] = bfn[0]
-                    bfndict['Coefficient'] = bfn[1]
-                    bfndict['Atom #'] = bfn[2]
+                    bfndict['Bfn. #'] = int(bfn[0])
+                    bfndict['Coefficient'] = float(bfn[1])
+                    bfndict['Atom #'] = int(bfn[2])
                     bfndict['Atom'] = bfn[3]
                     bfndict['Atom Fn.'] = bfn[4]
                     vec['Bfns'].append(bfndict)
