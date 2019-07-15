@@ -54,12 +54,12 @@ def parse_roots_from_tddft_output(file):
 
             auev = re.match(r'\s+Root\s+\d+\s+\w\s+(-?\d+\.\d+)\s+a.u.\s+(-?\d+\.\d+)\s+eV\s+', l)
             if auev:
-                d['a.u.'] = floeat(auev.group(1))
+                d['a.u.'] = float(auev.group(1))
                 d['eV'] = float(auev.group(2))
 
             s2 = re.match(r'\s+<S2>\s+=\s+(-?\d+\.\d+)\s+', l)
             if s2:
-                d['<S2>'] = floeat(s2.group(1))
+                d['<S2>'] = float(s2.group(1))
                 
             tm0m = re.match(r'\s+Transition Moments\s+X\s+(-?\d+\.\d+)\s+Y\s+(-?\d+\.\d+)\s+Z\s+(-?\d+\.\d+)', l)
             if tm0m:
@@ -71,7 +71,7 @@ def parse_roots_from_tddft_output(file):
                 
             tm2m = re.match(r'\s+Transition Moments\s+YY\s+(-?\d+\.\d+)\s+YZ\s+(-?\d+\.\d+)\s+ZZ\s+(-?\d+\.\d+)', l)
             if tm2m:
-                d['Transition Moments (YY, YZ, ZZ[typo?])'] = np.array(tm2m.groups()).astype(float)
+                d['Transition Moments (YY, YZ, ZZ)'] = np.array(tm2m.groups()).astype(float)
                 
     return rootdict
 
@@ -211,3 +211,50 @@ def parse_movec_info_all(lines):
         bvectors[vecnum] = vec
             
     return avectors, bvectors
+
+
+def parse_eigenvalue_differences(filepath):
+    
+    with open(filepath, 'r') as file:
+        lines = file.readlines()
+
+    startre = re.compile(r'smallest eigenvalue differences \(eV\)')
+
+    dashre = re.compile(r'-{10,}')
+
+    eigenre = re.compile(r'\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\w)\s+(-?\d+\.\d+)\s+(-?\d+\.\d+)\s+(-?\d+\.\d+)')
+
+    found = []
+    for i, l in enumerate(lines):
+        if startre.search(l):
+            found.append(i)
+    assert len(found) == 1, 'Should only find one line with eigenvalues header'
+    eigenblockstartline = found[0]
+
+    found = []
+    foundcount = 0
+
+    for i, l in enumerate(lines[eigenblockstartline:]):
+        if foundcount == 3:
+            break
+        if dashre.search(l):
+            found.append(i)
+            foundcount += 1
+    _, eigenstart, eigenend = [f + eigenblockstartline for f in found]
+
+    eigenvaluediffs = []
+    for l in lines[eigenstart:eigenend]:
+        m = eigenre.match(l)
+        if m:
+            parse = {}
+            parse['No.'] = int(m.group(1))
+            parse['Spin'] = int(m.group(2))
+            parse['Occ'] = int(m.group(3))
+            parse['Vir'] = int(m.group(4))
+            parse['Irrep'] = m.group(5)
+            parse['E(Occ)'] = float(m.group(6))
+            parse['E(Vir)'] = float(m.group(7))
+            parse['E(Diff)'] = float(m.group(8))
+            eigenvaluediffs.append(parse)
+            
+    return eigenvaluediffs

@@ -94,3 +94,54 @@ def filter_roots_by_tm_direction(roots, direction, threshold):
         if check_vector_direction(v['Transition Moments (XYZ)'], direction, threshold):
             filtered[r] = v
     return filtered
+
+
+def calc_normalized_root_contributions(orbs, erange, normalizerootcoeffs=True, normalizebfncoefficients=True):
+    '''Calculate fractions of atomic orbitals contributing to transitions in a specified energy range.
+    
+    Normalize keywords do simple normalizations of the absolute values of the coefficients.
+    '''
+    orbs = orbs.copy()
+    orbs = orbs[(orbs['root energy'] > erange[0]) & (orbs['root energy'] < erange[1])]
+    
+    # normalize root coefficients for each root
+    if normalizerootcoeffs:
+        for r in orbs['root'].unique():
+            sumrootcoeff = 0
+            for mo in orbs[orbs['root']==r]['MOnum'].unique():
+                sumrootcoeff += orbs[(orbs['root']==r) & (orbs['MOnum']==mo)]['root coeff abs.'].iloc[0]
+
+            orbs.loc[orbs['root']==r, 'root coeff abs.'] /= sumrootcoeff
+
+    # normalize coefficient of bfn's for each MO
+    if normalizebfncoefficients:
+        for r in orbs['root'].unique():
+            for mo in orbs[orbs['root']==r]['MOnum'].unique():
+                subset = (orbs['root']==r) & (orbs['MOnum']==mo)
+                orbs.loc[subset, 'Coefficient'] /= orbs.loc[subset, 'Coefficient'].abs().sum()
+    
+    new = orbs.copy()
+    for i, row in orbs.iterrows():
+        new.loc[i, 'weightedcontrib'] = abs(row['Coefficient']) * abs(row['root coeff abs.']) * abs(row['osc str'])
+
+    return new
+
+
+def get_transition_moment_projected_strength(roots, direction):
+    projected = {}
+    for r, v in roots.items():
+        assert abs(v['Electric Quadrupole']) < 1e-4, 'Large quadrupole found, but projection based on dipole-behavior.'
+        
+        
+        tmvec = v['Transition Moments (XYZ)']
+        tmvec = tmvec.copy()
+        tmvec /= np.linalg.norm(tmvec)
+        direction /= np.linalg.norm(direction)
+        proj = v['Total Oscillator Strength'] * np.dot(tmvec, direction) ** 2
+        if not np.isnan(proj):
+            projected[r] = {}
+            projected[r]['ProjOscStr'] = proj
+            projected[r]['eV'] = v['eV']
+            projected[r]['ProjDir'] = direction
+    return projected
+
