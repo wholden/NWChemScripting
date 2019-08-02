@@ -370,3 +370,30 @@ def take_erange(energies, intensities, erange):
 def integral_normalize(energies, intensities, erange):
     e, i = take_erange(energies, intensities, erange)
     return np.array([energies, intensities / np.sum(i)])
+
+
+def proper_spectrum_from_transitions(transitions, lorentz_ev=1, erange=None, numpoints=1000, peaknorm=True):
+    x, y = transitions
+    if erange is not None:
+        good = np.logical_and(x >= erange[0], x <= erange[1])
+        x, y = x[good], y[good]
+        x_eval = np.linspace(erange[0], erange[1], numpoints)
+    else:
+        xmin = np.min(x)
+        xmax = np.max(x)
+        padding = (xmax - xmin) / 2
+        x_eval = np.linspace(xmin - padding, xmax + padding, numpoints)
+    
+    spectrum = np.zeros_like(x_eval)
+    
+    #do proper energy scaling
+    sy = x ** 2 * y
+    y = sy / sy.sum()
+    
+    for e, a in zip(x, y):
+        spectrum += a * Lorentzian(x_eval, e, lorentz_ev/2)
+    
+    if peaknorm:
+        spectrum = spectrum / np.max(spectrum)
+
+    return np.array([x_eval, spectrum])

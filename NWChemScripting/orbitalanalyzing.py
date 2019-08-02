@@ -1,21 +1,21 @@
 import pandas as pd
 import numpy as np
 
-def get_sticks(parsed, erange=(2440, 2475), oscillatorthresh=1e-10):
+def get_sticks(parsed, energyshift, erange=(2440, 2475), oscillatorthresh=1e-10):
     x = []
     y = []
     for r, v in parsed.items():
-        energy = abs(float(v['eV'])) + COMMONSHIFT
+        energy = abs(float(v['eV'])) + energyshift
         if energy > erange[0] and energy < erange[1]:
             if abs(v['Total Oscillator Strength']) > oscillatorthresh:
                 x.append(energy)
                 y.append(abs(v['Total Oscillator Strength']))
     return np.array([x, y])
 
-def get_transitions_erange_threshold(parsed, erange=(2440, 2475), oscillatorthresh=1e-10):
+def get_transitions_erange_threshold(parsed, energyshift, erange=(2440, 2475), oscillatorthresh=1e-10):
     trans = []
     for r, v in parsed.items():
-        energy = abs(float(v['eV'])) + COMMONSHIFT
+        energy = abs(float(v['eV'])) + energyshift
         if energy > erange[0] and energy < erange[1]:
             if abs(v['Total Oscillator Strength']) > oscillatorthresh:
                 trans.append(r)
@@ -25,7 +25,7 @@ def get_transitions_erange_threshold(parsed, erange=(2440, 2475), oscillatorthre
     return new
 
 
-def get_transitions_orbitals_beta_only(roots, movecs, rootthresh=0.25, bfnthresh=0.1):
+def get_transitions_orbitals_beta_only(roots, movecs, energyshift, rootthresh=0.25, bfnthresh=0.1):
     transorbs = []
     for rnum, root in roots.items():
         for transition in root['transitions']:
@@ -41,10 +41,61 @@ def get_transitions_orbitals_beta_only(roots, movecs, rootthresh=0.25, bfnthresh
                         bfn['osc str'] = root['Total Oscillator Strength']
                         bfn['MOnum'] = occm
                         bfn['root'] = rnum
-                        bfn['root energy'] = abs(float(root['eV'])) + COMMONSHIFT
+                        bfn['root energy'] = abs(float(root['eV'])) + energyshift
                         bfn['root coeff abs.'] = abs(transition['coeff'])
                         transorbs.append(bfn)
     return pd.DataFrame(transorbs)
+
+
+def get_transitions_orbitals_beta_only_normed(roots, movecs, energyshift):
+    normedroots = copy.deepcopy(roots)
+    for rnum, root in normedroots.items():
+        transtotal = 0
+        for transition in root['transitions']:
+            transition['coeff^2'] = transition['coeff'] ** 2
+            transtotal += transition['coeff^2']
+        for transition in root['transitions']:
+            transition['normedcoeff^2'] = transition['coeff^2'] / transtotal
+    roots = normedroots
+    
+    normedmovecs = copy.deepcopy(movecs)
+    new = {}
+    # crop to only occupied movecs to reduce computation time
+    for monum, mv in normedmovecs.items():
+        if mv['Occupation'] > 0:
+            new[monum] = mv
+    normedmovecs = new
+    # normalize
+    for monum, mv in normedmovecs.items():
+        mototal = 0
+        for bfn in mv['Bfns']:
+            mototal += abs(bfn['Coefficient'])
+        for bfn in mv['Bfns']:
+            bfn['NormedAbsCoefficient'] = abs(bfn['Coefficient']) / mototal
+    movecs = normedmovecs
+    
+    transorbs = []
+    for rnum, root in roots.items():
+        for transition in root['transitions']:
+            try:
+                occm = int(transition['occ (beta)'])
+            except KeyError:
+                continue
+            m = movecs[occm]
+            for bfn in m['Bfns']:
+                bfn = bfn.copy()
+                bfn['OscStr'] = root['Total Oscillator Strength']
+                bfn['MOnum'] = occm
+                bfn['root'] = rnum
+                bfn['root energy'] = abs(root['eV']) + energyshift
+                bfn['root coeff^2 normed'] = transition['normedcoeff^2']
+                transorbs.append(bfn)
+    
+    transorbs = pd.DataFrame(transorbs)
+    
+    transorbs['weightedcontrib'] = transorbs['NormedAbsCoefficient'] * transorbs['root coeff^2 normed'] * transorbs['OscStr'].abs()
+                
+    return transorbs
 
 
 def calc_orbitals_fractions(orbs, erange, normalizerootcoeffs=True, normalizebfncoefficients=True):
@@ -145,3 +196,33 @@ def get_transition_moment_projected_strength(roots, direction):
             projected[r]['ProjDir'] = direction
     return projected
 
+
+def calc_orbitals_fractions_from_transitions_orbitals(transorbs, erange, fracthresh=0.05):
+    transorbs = copy.deepcopy(transorbs[(transorbs['root energy'] >= erange[0]) & (transorbs['root energy'] < erange[1])])
+    
+    fracs = {}
+    total = 0
+    for i, row in transorbs.iterrows():
+        if row['Atom'] not in fracs:
+            fracs[row['Atom']] = {}
+        if row['Atom Fn.'] not in fracs[row['Atom']]:
+            fracs[row['Atom']][row['Atom Fn.']] = 0
+        fracs[row['Atom']][row['Atom Fn.']] += row['weightedcontrib']
+        total += row['weightedcontrib']
+
+    # normalize
+    new = copy.deepcopy(fracs)
+    for atom, d in fracs.items():
+        for fn, v in d.items():
+            new[atom][fn] = v / total
+    fracs = new
+
+    # threshold
+    new = {}
+    for atom, d in fracs.items():
+        new[atom] = {}
+        for fn, v in d.items():
+            if v > thresh:
+                new[atom][fn] = v
+    
+    return new
