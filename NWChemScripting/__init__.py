@@ -372,6 +372,12 @@ def integral_normalize(energies, intensities, erange):
     return np.array([energies, intensities / np.sum(i)])
 
 
+def integral_norm_over_erange(x, y, erange):
+    good = np.where(np.logical_and(x>erange[0], x<erange[1]))
+    y = y / np.abs(np.trapz(y[good], x[good]))
+    return np.array([x, y])
+
+
 def proper_spectrum_from_transitions(transitions, lorentz_ev=1, erange=None, numpoints=1000, peaknorm=True):
     x, y = transitions
     if erange is not None:

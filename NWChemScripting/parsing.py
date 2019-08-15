@@ -160,9 +160,9 @@ def parse_movec_info_all(lines):
             if m:
                 for bfn in m:
                     bfndict = {}
-                    bfndict['Bfn. #'] = bfn[0]
-                    bfndict['Coefficient'] = bfn[1]
-                    bfndict['Atom #'] = bfn[2]
+                    bfndict['Bfn. #'] = int(bfn[0])
+                    bfndict['Coefficient'] = float(bfn[1])
+                    bfndict['Atom #'] = int(bfn[2])
                     bfndict['Atom'] = bfn[3]
                     bfndict['Atom Fn.'] = bfn[4]
                     vec['Bfns'].append(bfndict)

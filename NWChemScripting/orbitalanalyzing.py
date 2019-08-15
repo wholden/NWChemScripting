@@ -1,7 +1,25 @@
 import pandas as pd
 import numpy as np
+import copy
+import warnings
+
+
+def get_sticks_from_roots(roots, eshift, erange=(2400, 2500)):
+    x = []
+    y = []
+    for num, root in roots.items():
+        if root['eV'] > 0:
+            continue
+        energy = abs(root['eV']) + eshift
+        if (energy > erange[0]) & (energy < erange[1]):
+            x.append(energy)
+            y.append(abs(root['Total Oscillator Strength']))
+    return np.array([x, y])
+
 
 def get_sticks(parsed, energyshift, erange=(2440, 2475), oscillatorthresh=1e-10):
+    '''Deprecated'''
+    warnings.warn('Kept for backwards compatibility, use get_sticks_from_roots instead', DeprecationWarning)
     x = []
     y = []
     for r, v in parsed.items():
@@ -26,6 +44,8 @@ def get_transitions_erange_threshold(parsed, energyshift, erange=(2440, 2475), o
 
 
 def get_transitions_orbitals_beta_only(roots, movecs, energyshift, rootthresh=0.25, bfnthresh=0.1):
+    '''Deprecated'''
+    warnings.warn('Deprecated in favor of get_transitions_orbitals_beta_only_normed', DeprecationWarning)
     transorbs = []
     for rnum, root in roots.items():
         for transition in root['transitions']:
@@ -222,7 +242,7 @@ def calc_orbitals_fractions_from_transitions_orbitals(transorbs, erange, fracthr
     for atom, d in fracs.items():
         new[atom] = {}
         for fn, v in d.items():
-            if v > thresh:
+            if v > fracthresh:
                 new[atom][fn] = v
     
     return new
