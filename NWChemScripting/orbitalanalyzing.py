@@ -246,3 +246,17 @@ def calc_orbitals_fractions_from_transitions_orbitals(transorbs, erange, fracthr
                 new[atom][fn] = v
     
     return new
+
+def rotation_matrix_to_align_vectors(fromvec, tovec):
+    '''Based on:
+    https://math.stackexchange.com/questions/180418/calculate-rotation-matrix-to-align-vector-a-to-vector-b-in-3d
+    '''
+    fromvec = fromvec / np.linalg.norm(fromvec)
+    tovec = tovec / np.linalg.norm(tovec)
+    vcross = np.cross(fromvec, tovec)
+    cos = np.dot(fromvec, tovec)
+    skewm = np.array([[0, -vcross[2], vcross[1]], 
+                      [vcross[2], 0, -vcross[0]], 
+                      [-vcross[1], vcross[0], 0]])
+    rotM = np.identity(3) + skewm + np.matmul(skewm, skewm) * (1 / (1 + cos))
+    return rotM
